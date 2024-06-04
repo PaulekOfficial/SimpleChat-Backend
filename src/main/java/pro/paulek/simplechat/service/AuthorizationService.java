@@ -13,21 +13,16 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.stereotype.Service;
+import pro.paulek.simplechat.domain.User;
 import pro.paulek.simplechat.domain.auth.*;
 import pro.paulek.simplechat.domain.security.RefreshToken;
 import pro.paulek.simplechat.domain.security.Token;
-import pro.paulek.simplechat.domain.user.User;
-import pro.paulek.simplechat.domain.user.UserCredentials;
-import pro.paulek.simplechat.domain.user.UserInformation;
 import pro.paulek.simplechat.exceptions.NoTokenPresentException;
 import pro.paulek.simplechat.exceptions.RefreshTokenNotFoundException;
 import pro.paulek.simplechat.exceptions.TokenInvalidException;
 import pro.paulek.simplechat.exceptions.TokenRevokedException;
 import pro.paulek.simplechat.repository.auth.RefreshTokenRepository;
 import pro.paulek.simplechat.repository.auth.TokenRepository;
-import pro.paulek.simplechat.repository.user.RoleRepository;
-import pro.paulek.simplechat.repository.user.UserCredentialsRepository;
-import pro.paulek.simplechat.repository.user.UserInformationRepository;
 import pro.paulek.simplechat.repository.user.UserRepository;
 import pro.paulek.simplechat.service.security.JwtService;
 import pro.paulek.simplechat.service.security.UserDetailsImpl;
@@ -45,16 +40,7 @@ public class AuthorizationService {
     AuthenticationManager authenticationManager;
 
     @Autowired
-    UserCredentialsRepository userCredentialsRepository;
-
-    @Autowired
-    UserInformationRepository userInformationRepository;
-
-    @Autowired
     UserRepository userRepository;
-
-    @Autowired
-    RoleRepository roleRepository;
 
     @Autowired
     PasswordEncoder encoder;
@@ -149,8 +135,8 @@ public class AuthorizationService {
             return ResponseEntity.notFound().build();
         }
 
-        tokenRepository.save(new Token(user.get().getCredentials(), jwt, ZonedDateTime.now()));
-        refreshTokenRepository.save(new RefreshToken(user.get().getCredentials(), refresh, ZonedDateTime.now()));
+        tokenRepository.save(new Token(user.get(), jwt, ZonedDateTime.now()));
+        refreshTokenRepository.save(new RefreshToken(user.get(), refresh, ZonedDateTime.now()));
 
         return ResponseEntity.ok(new JwtResponse(
                 jwt,
@@ -210,7 +196,7 @@ public class AuthorizationService {
             oldToken.setExpiredTime(ZonedDateTime.now());
         }
         tokenRepository.save(oldToken);
-        tokenRepository.save(new Token(user.get().getCredentials(), jwt, ZonedDateTime.now()));
+        tokenRepository.save(new Token(user.get(), jwt, ZonedDateTime.now()));
 
         Optional<RefreshToken> refreshTokenOptional = refreshTokenRepository.findByRefreshToken(refreshRequest.getRefreshToken());
         if (refreshTokenOptional.isEmpty()) {
@@ -228,7 +214,7 @@ public class AuthorizationService {
             oldRefreshToken.setExpiredTime(ZonedDateTime.now());
         }
         refreshTokenRepository.save(oldRefreshToken);
-        refreshTokenRepository.save(new RefreshToken(user.get().getCredentials(), jwt, ZonedDateTime.now()));
+        refreshTokenRepository.save(new RefreshToken(user.get(), jwt, ZonedDateTime.now()));
 
         return ResponseEntity.ok(new JwtResponse(
                 jwt,
@@ -252,27 +238,12 @@ public class AuthorizationService {
                     .body(new MessageResponse("Error: Email is already in use!"));
         }
 
-        UserInformation userInformation = new UserInformation(
-                signUpRequest.getFirstName(),
-                signUpRequest.getLastName(),
-                "",
-                ZonedDateTime.now()
-        );
-
-        UserCredentials userCredentials = new UserCredentials(
-                encoder.encode(signUpRequest.getPassword()),
-                ZonedDateTime.now()
-        );
-
         User user = new User(
                 signUpRequest.getUsername().toLowerCase(),
                 signUpRequest.getEmail(),
-                userCredentials,
-                userInformation
+                encoder.encode(signUpRequest.getPassword())
         );
         userRepository.save(user);
-        userCredentialsRepository.save(userCredentials);
-        userInformationRepository.save(userInformation);
 
         return ResponseEntity.ok(new MessageResponse("User " + signUpRequest.getUsername() + " has been registered!"));
     }
@@ -281,13 +252,13 @@ public class AuthorizationService {
         return ResponseEntity.ok(new MessageResponse("Token ok!"));
     }
 
-    public void revokeAllAccess(UserCredentials userCredentials) {
-        this.revokeAllTokens(userCredentials);
-        this.revokeAllRefreshTokens(userCredentials);
+    public void revokeAllAccess(User user) {
+        this.revokeAllTokens(user);
+        this.revokeAllRefreshTokens(user);
     }
 
-    public void revokeAllTokens(UserCredentials userCredentials) {
-        Collection<Token> tokens = this.tokenRepository.findAllByUserCredentials(userCredentials);
+    public void revokeAllTokens(User user) {
+        Collection<Token> tokens = this.tokenRepository.findAllByUser(user);
         tokens.forEach(token -> {
             if (!token.isRevoked()) {
                 token.setRevoked(true);
@@ -303,8 +274,8 @@ public class AuthorizationService {
         });
     }
 
-    public void revokeAllRefreshTokens(UserCredentials userCredentials) {
-        Collection<RefreshToken> tokens = this.refreshTokenRepository.findAllByUserCredentials(userCredentials);
+    public void revokeAllRefreshTokens(User user) {
+        Collection<RefreshToken> tokens = this.refreshTokenRepository.findAllByUser(user);
         tokens.forEach(token -> {
             if (!token.isRevoked()) {
                 token.setRevoked(true);

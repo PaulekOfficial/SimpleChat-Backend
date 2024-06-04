@@ -1,7 +1,7 @@
 package pro.paulek.simplechat.repository.user;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import pro.paulek.domain.user.User;
+import pro.paulek.simplechat.domain.User;
 
 import java.util.Optional;
 

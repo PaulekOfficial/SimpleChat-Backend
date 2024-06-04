@@ -6,8 +6,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import pro.paulek.domain.user.User;
-import pro.paulek.repository.user.UserRepository;
+import pro.paulek.simplechat.domain.User;
+import pro.paulek.simplechat.repository.user.UserRepository;
 
 @Service
 public class UserDetailsServiceImpl implements UserDetailsService {

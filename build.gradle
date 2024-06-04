@@ -6,7 +6,7 @@ plugins {
 
 group = 'pro.paulek'
 version = '0.0.1-SNAPSHOT'
-sourceCompatibility = '18'
+sourceCompatibility = '17'
 
 repositories {
     mavenCentral()

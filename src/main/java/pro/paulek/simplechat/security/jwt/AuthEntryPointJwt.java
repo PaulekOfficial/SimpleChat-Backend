@@ -23,19 +23,6 @@ public class AuthEntryPointJwt implements AuthenticationEntryPoint {
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-//
-//        if (authException instanceof InsufficientAuthenticationException) {
-//            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-//            final Map<String, Object> body = new HashMap<>();
-//            body.put("status", response.getStatus());
-//            body.put("message", "An internal error occurred");
-//            body.put("path", request.getServletPath());
-//
-//            final ObjectMapper mapper = new ObjectMapper();
-//            mapper.writeValue(response.getOutputStream(), body);
-//
-//            return;
-//        }
 
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setHeader("Access-Control-Allow-Origin", "*");

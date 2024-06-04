@@ -12,9 +12,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import pro.paulek.domain.security.Token;
-import pro.paulek.repository.auth.RefreshTokenRepository;
-import pro.paulek.repository.auth.TokenRepository;
+import pro.paulek.simplechat.domain.security.Token;
+import pro.paulek.simplechat.repository.auth.RefreshTokenRepository;
+import pro.paulek.simplechat.repository.auth.TokenRepository;
 
 import java.security.Key;
 import java.time.ZonedDateTime;

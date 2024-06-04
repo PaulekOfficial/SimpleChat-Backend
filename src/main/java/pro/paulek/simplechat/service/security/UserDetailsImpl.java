@@ -2,14 +2,13 @@ package pro.paulek.simplechat.service.security;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-import pro.paulek.domain.user.User;
+import pro.paulek.simplechat.domain.User;
 
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class UserDetailsImpl implements UserDetails {
     private static final long serialVersionUID = 1L;
@@ -38,19 +37,17 @@ public class UserDetailsImpl implements UserDetails {
     }
 
     public static UserDetailsImpl build(User user) {
-        List<GrantedAuthority> authorities = user.getRoles().stream()
-                .map(role -> new SimpleGrantedAuthority(role.getName().name()))
-                .collect(Collectors.toList());
+        List<GrantedAuthority> authorities = new ArrayList<>();
 
         return new UserDetailsImpl(
                 user.getId(),
                 user.getNickname(),
                 user.getEmail(),
-                user.getCredentials().isActive(),
-                user.getCredentials().isLocked(),
-                user.getCredentials().getAccountExpireDate(),
-                user.getCredentials().getCredentialsExpireDate(),
-                user.getCredentials().getPassword(),
+                true,
+                false,
+                null,
+                null,
+                user.getPassword(),
                 authorities);
     }
 

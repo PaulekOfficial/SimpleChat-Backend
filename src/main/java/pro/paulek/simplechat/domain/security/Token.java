@@ -3,7 +3,7 @@ package pro.paulek.simplechat.domain.security;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import pro.paulek.domain.user.UserCredentials;
+import pro.paulek.simplechat.domain.User;
 
 import java.time.ZonedDateTime;
 import java.util.Objects;
@@ -16,7 +16,7 @@ public class Token {
 
     @ManyToOne
     @JoinColumn(name = "user_id")
-    private UserCredentials userCredentials;
+    private User user;
 
     @NotNull
     @Column(length = 500, unique = true)
@@ -37,15 +37,15 @@ public class Token {
     public Token() {
     }
 
-    public Token(UserCredentials userCredentials, @NotNull String token, ZonedDateTime timestamp) {
-        this.userCredentials = userCredentials;
+    public Token(User user, @NotNull String token, ZonedDateTime timestamp) {
+        this.user = user;
         this.token = token;
         this.timestamp = timestamp;
     }
 
-    public Token(Long id, UserCredentials userCredentials, @NotNull String token, boolean expired, @Nullable ZonedDateTime expiredTime, boolean revoked, @Nullable ZonedDateTime revokedTime, ZonedDateTime timestamp) {
+    public Token(Long id, User user, @NotNull String token, boolean expired, @Nullable ZonedDateTime expiredTime, boolean revoked, @Nullable ZonedDateTime revokedTime, ZonedDateTime timestamp) {
         this.id = id;
-        this.userCredentials = userCredentials;
+        this.user = user;
         this.token = token;
         this.expired = expired;
         this.expiredTime = expiredTime;
@@ -62,12 +62,12 @@ public class Token {
         this.id = id;
     }
 
-    public UserCredentials getUser() {
-        return userCredentials;
+    public User getUser() {
+        return user;
     }
 
-    public void setUser(UserCredentials userCredentials) {
-        this.userCredentials = userCredentials;
+    public void setUser(User user) {
+        this.user = user;
     }
 
     public String getToken() {
@@ -124,19 +124,19 @@ public class Token {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof Token token1)) return false;
-        return expired == token1.expired && revoked == token1.revoked && Objects.equals(id, token1.id) && Objects.equals(userCredentials, token1.userCredentials) && Objects.equals(token, token1.token) && Objects.equals(expiredTime, token1.expiredTime) && Objects.equals(revokedTime, token1.revokedTime) && Objects.equals(timestamp, token1.timestamp);
+        return expired == token1.expired && revoked == token1.revoked && Objects.equals(id, token1.id) && Objects.equals(user, token1.user) && Objects.equals(token, token1.token) && Objects.equals(expiredTime, token1.expiredTime) && Objects.equals(revokedTime, token1.revokedTime) && Objects.equals(timestamp, token1.timestamp);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, userCredentials, token, expired, expiredTime, revoked, revokedTime, timestamp);
+        return Objects.hash(id, user, token, expired, expiredTime, revoked, revokedTime, timestamp);
     }
 
     @Override
     public String toString() {
         return "Token{" +
                 "id=" + id +
-                ", user=" + userCredentials +
+                ", user=" + user +
                 ", token='" + token + '\'' +
                 ", expired=" + expired +
                 ", expiredTime=" + expiredTime +

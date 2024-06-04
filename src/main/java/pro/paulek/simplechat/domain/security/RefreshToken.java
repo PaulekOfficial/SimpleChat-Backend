@@ -3,7 +3,7 @@ package pro.paulek.simplechat.domain.security;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import pro.paulek.domain.user.UserCredentials;
+import pro.paulek.simplechat.domain.User;
 
 import java.time.ZonedDateTime;
 import java.util.Objects;
@@ -16,7 +16,7 @@ public class RefreshToken {
 
     @ManyToOne
     @JoinColumn(name = "user_id")
-    private UserCredentials userCredentials;
+    private User user;
 
     @NotNull
     @Column(length = 500, unique = true)
@@ -37,15 +37,15 @@ public class RefreshToken {
     public RefreshToken() {
     }
 
-    public RefreshToken(UserCredentials userCredentials, @NotNull String refreshToken, ZonedDateTime timestamp) {
-        this.userCredentials = userCredentials;
+    public RefreshToken(User user, @NotNull String refreshToken, ZonedDateTime timestamp) {
+        this.user = user;
         this.refreshToken = refreshToken;
         this.timestamp = timestamp;
     }
 
-    public RefreshToken(Long id, UserCredentials userCredentials, @NotNull String refreshToken, boolean expired, @Nullable ZonedDateTime expiredTime, boolean revoked, @Nullable ZonedDateTime revokedTime, ZonedDateTime timestamp) {
+    public RefreshToken(Long id, User user, @NotNull String refreshToken, boolean expired, @Nullable ZonedDateTime expiredTime, boolean revoked, @Nullable ZonedDateTime revokedTime, ZonedDateTime timestamp) {
         this.id = id;
-        this.userCredentials = userCredentials;
+        this.user = user;
         this.refreshToken = refreshToken;
         this.expired = expired;
         this.expiredTime = expiredTime;
@@ -62,12 +62,12 @@ public class RefreshToken {
         this.id = id;
     }
 
-    public UserCredentials getUser() {
-        return userCredentials;
+    public User getUser() {
+        return user;
     }
 
-    public void setUser(UserCredentials userCredentials) {
-        this.userCredentials = userCredentials;
+    public void setUser(User user) {
+        this.user = user;
     }
 
     public String getRefreshToken() {
@@ -124,19 +124,19 @@ public class RefreshToken {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof RefreshToken token1)) return false;
-        return expired == token1.expired && revoked == token1.revoked && Objects.equals(id, token1.id) && Objects.equals(userCredentials, token1.userCredentials) && Objects.equals(refreshToken, token1.refreshToken) && Objects.equals(expiredTime, token1.expiredTime) && Objects.equals(revokedTime, token1.revokedTime) && Objects.equals(timestamp, token1.timestamp);
+        return expired == token1.expired && revoked == token1.revoked && Objects.equals(id, token1.id) && Objects.equals(user, token1.user) && Objects.equals(refreshToken, token1.refreshToken) && Objects.equals(expiredTime, token1.expiredTime) && Objects.equals(revokedTime, token1.revokedTime) && Objects.equals(timestamp, token1.timestamp);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, userCredentials, refreshToken, expired, expiredTime, revoked, revokedTime, timestamp);
+        return Objects.hash(id, user, refreshToken, expired, expiredTime, revoked, revokedTime, timestamp);
     }
 
     @Override
     public String toString() {
         return "Token{" +
                 "id=" + id +
-                ", user=" + userCredentials +
+                ", user=" + user +
                 ", token='" + refreshToken + '\'' +
                 ", expired=" + expired +
                 ", expiredTime=" + expiredTime +

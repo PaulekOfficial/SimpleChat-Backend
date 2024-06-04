@@ -3,8 +3,8 @@ package pro.paulek.simplechat.repository.auth;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+import pro.paulek.simplechat.domain.User;
 import pro.paulek.simplechat.domain.security.Token;
-import pro.paulek.simplechat.domain.user.UserCredentials;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -14,9 +14,9 @@ public interface TokenRepository extends JpaRepository<Token, Long> {
 
     Optional<Token> findByToken(String token);
 
-    Optional<Token> findByUserCredentials(UserCredentials userCredentials);
+    Optional<Token> findByUser(User user);
 
-    Collection<Token> findAllByUserCredentials(UserCredentials userCredentials);
+    Collection<Token> findAllByUser(User user);
 
     @Query(
             value = "SELECT * FROM token WHERE expired=0",
@@ -26,6 +26,6 @@ public interface TokenRepository extends JpaRepository<Token, Long> {
 
     Boolean existsByToken(String token);
 
-    Boolean existsByUserCredentials(UserCredentials userCredentials);
+    Boolean existsByUser(User user);
 
 }
