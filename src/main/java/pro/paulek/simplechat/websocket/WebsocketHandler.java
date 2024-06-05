@@ -1,5 +1,7 @@
 package pro.paulek.simplechat.websocket;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,14 +11,14 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.AbstractWebSocketHandler;
 import pro.paulek.simplechat.domain.User;
-import pro.paulek.simplechat.domain.websocket.WebsocketMessage;
 import pro.paulek.simplechat.domain.websocket.WebsocketUser;
+import pro.paulek.simplechat.domain.websocket.packet.AuthorizationPacket;
+import pro.paulek.simplechat.domain.websocket.packet.TextPacket;
 import pro.paulek.simplechat.repository.user.UserRepository;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -26,7 +28,7 @@ public class WebsocketHandler extends AbstractWebSocketHandler {
     private final Logger logger = Logger.getLogger(WebsocketHandler.class.getName());
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final Map<Long, WebsocketUser> websocketUsers = new HashMap<>();
+    private final Map<WebSocketSession, WebsocketUser> websocketUsers = new HashMap<>();
 
     @Autowired
     private UserRepository userRepository;
@@ -37,61 +39,67 @@ public class WebsocketHandler extends AbstractWebSocketHandler {
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-        Optional<User> optionalUser = this.getUserFromSession(session);
+        logger.info("Message received " + message.getPayload());
 
-        if (optionalUser.isEmpty()) {
-            return;
+        JsonNode jsonNode = objectMapper.readTree(message.getPayload());
+
+        String type = jsonNode.get("type").asText();
+
+        if ("authorization".equals(type)) {
+            AuthorizationPacket authorizationPacket = objectMapper.treeToValue(jsonNode, AuthorizationPacket.class);
+
+            handleAuthorizationPacket(session, authorizationPacket);
+        } else if ("text".equals(type)) {
+            TextPacket textPacket = objectMapper.treeToValue(jsonNode, TextPacket.class);
+
+            handleTextPacket(session, textPacket);
+        } else {
+            logger.warning("Unknown packet type: " + type);
         }
-
-        WebsocketMessage websocketMessage = new WebsocketMessage(optionalUser.get().getId(), optionalUser.get().getNickname(), message.getPayload());
-        String jsonMessage = objectMapper.writeValueAsString(websocketMessage);
-
-        websocketUsers.values().stream().filter(websocketUser -> !Objects.equals(websocketUser.getUser().getId(), optionalUser.get().getId())).forEach(websocketUser -> {
-            try {
-                websocketUser.getWebsocketSession().sendMessage(new TextMessage(jsonMessage));
-            } catch (IOException e) {
-                logger.log(Level.SEVERE, "Error while sending message", e);
-                throw new RuntimeException(e);
-            }
-        });
     }
 
     @Override
     public void afterConnectionEstablished(@NotNull WebSocketSession session) throws Exception {
         logger.info("Connection established");
-
-        logger.log(Level.WARNING, session.getHandshakeHeaders().toString());
-
-        var userId = session.getHandshakeHeaders().get("user-id");
-        if (userId == null || userId.isEmpty()) {
-            logger.warning("User id not found in headers");
-            session.close(CloseStatus.BAD_DATA);
-            return;
-        }
-
-        Optional<User> optionalUser = userRepository.findById(Long.valueOf(userId.get(0)));
-        if (optionalUser.isEmpty()) {
-            session.close(CloseStatus.BAD_DATA);
-            session.close();
-            return;
-        }
-
-        websocketUsers.put(optionalUser.get().getId(), new WebsocketUser(optionalUser.get(), session));
     }
 
     @Override
     public void afterConnectionClosed(@NotNull WebSocketSession session, @NotNull CloseStatus status) throws Exception {
         logger.info("Connection closed");
 
-        Optional<User> optionalUser = this.getUserFromSession(session);
+        websocketUsers.remove(session);
+    }
 
-        if (optionalUser.isEmpty()) {
+    private void handleAuthorizationPacket(WebSocketSession session, AuthorizationPacket packet) {
+
+    }
+
+    private void handleTextPacket(WebSocketSession session, TextPacket packet) {
+        if (!websocketUsers.containsKey(session)) {
+            logger.warning("User is not authorized");
             return;
         }
 
-        websocketUsers.remove(optionalUser.get().getId());
+        String jsonMessage;
+        try {
+            jsonMessage = objectMapper.writeValueAsString(packet);
+        } catch (JsonProcessingException e) {
+            logger.log(Level.SEVERE, "Error while converting TextPacket to JSON", e);
+            return;
+        }
+
+        websocketUsers.values().stream()
+                .filter(websocketUser -> !websocketUser.getWebsocketSession().equals(session))
+                .forEach(websocketUser -> {
+                    try {
+                        websocketUser.getWebsocketSession().sendMessage(new TextMessage(jsonMessage));
+                    } catch (IOException e) {
+                        logger.log(Level.SEVERE, "Error while sending TextPacket", e);
+                    }
+                });
     }
 
+    //This method is used to get user from session, but will not work because the implementation of Websocket on browsers does not support this, huray!
     private Optional<User> getUserFromSession(WebSocketSession session) {
         return websocketUsers.values().stream()
                 .filter(websocketUser -> websocketUser.getWebsocketSession().equals(session))
