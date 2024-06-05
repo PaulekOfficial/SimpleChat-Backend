@@ -1,8 +1,11 @@
 package pro.paulek.simplechat.websocket;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -14,9 +17,11 @@ import pro.paulek.simplechat.domain.User;
 import pro.paulek.simplechat.domain.websocket.WebsocketUser;
 import pro.paulek.simplechat.domain.websocket.packet.AuthorizationPacket;
 import pro.paulek.simplechat.domain.websocket.packet.TextPacket;
+import pro.paulek.simplechat.repository.auth.TokenRepository;
 import pro.paulek.simplechat.repository.user.UserRepository;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -27,14 +32,21 @@ import java.util.logging.Logger;
 public class WebsocketHandler extends AbstractWebSocketHandler {
     private final Logger logger = Logger.getLogger(WebsocketHandler.class.getName());
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
     private final Map<WebSocketSession, WebsocketUser> websocketUsers = new HashMap<>();
 
     @Autowired
     private UserRepository userRepository;
 
-    public WebsocketHandler(UserRepository userRepository) {
+    @Autowired
+    private TokenRepository tokenRepository;
+
+    public WebsocketHandler(UserRepository userRepository, TokenRepository tokenRepository) {
         this.userRepository = userRepository;
+        this.tokenRepository = tokenRepository;
     }
 
     @Override
@@ -45,11 +57,11 @@ public class WebsocketHandler extends AbstractWebSocketHandler {
 
         String type = jsonNode.get("type").asText();
 
-        if ("authorization".equals(type)) {
+        if (type.equalsIgnoreCase("authorization")) {
             AuthorizationPacket authorizationPacket = objectMapper.treeToValue(jsonNode, AuthorizationPacket.class);
 
             handleAuthorizationPacket(session, authorizationPacket);
-        } else if ("text".equals(type)) {
+        } else if (type.equalsIgnoreCase("text")) {
             TextPacket textPacket = objectMapper.treeToValue(jsonNode, TextPacket.class);
 
             handleTextPacket(session, textPacket);
@@ -71,7 +83,25 @@ public class WebsocketHandler extends AbstractWebSocketHandler {
     }
 
     private void handleAuthorizationPacket(WebSocketSession session, AuthorizationPacket packet) {
+        Optional<User> userOptional = userRepository.findById(packet.getUserId());
 
+        if (userOptional.isEmpty()) {
+            logger.warning("User not found");
+            return;
+        }
+
+        var tokenOptional = tokenRepository.findByToken(packet.getToken());
+        if (tokenOptional.isEmpty()) {
+            logger.warning("Token not found");
+            return;
+        }
+        var token = tokenOptional.get();
+        if (token.isExpired() || token.isRevoked()) {
+            logger.warning("Token is expired or revoked");
+            return;
+        }
+
+        websocketUsers.put(session, new WebsocketUser(userOptional.get(), session));
     }
 
     private void handleTextPacket(WebSocketSession session, TextPacket packet) {
@@ -97,6 +127,16 @@ public class WebsocketHandler extends AbstractWebSocketHandler {
                         logger.log(Level.SEVERE, "Error while sending TextPacket", e);
                     }
                 });
+    }
+
+    public <T> String serializePacketWithAddedType(T packet, String type) throws JsonProcessingException {
+        JsonNode jsonNode = objectMapper.valueToTree(packet);
+
+        ObjectNode objectNode = (ObjectNode) jsonNode;
+
+        objectNode.put("type", type);
+
+        return objectMapper.writeValueAsString(objectNode);
     }
 
     //This method is used to get user from session, but will not work because the implementation of Websocket on browsers does not support this, huray!

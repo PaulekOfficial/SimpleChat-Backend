@@ -27,7 +27,7 @@ public class User {
     @Size(max = 120)
     private String password;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.EAGER)
     private Avatar avatar;
 
     private Instant createdAt;

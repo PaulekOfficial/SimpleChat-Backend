@@ -21,7 +21,7 @@ import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 
 @RestController()
-@CrossOrigin()
+@CrossOrigin("*")
 @RequestMapping("/api/v1/accounts")
 public class AccountController {
     @Autowired
